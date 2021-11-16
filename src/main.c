@@ -29,42 +29,32 @@ void task1() {
     uint8_t a = 0;
     // spawn new task from within thread
     //create_task(200, task1a);
+
     while(1) {
             if(serial_available()) // read USART/serial and pass char to shell
                 shell_recieve_char(serial_getc());
-            //serial_puts("task1\n\r",NULL);
-            //shell_println("task1");
-            //TASK_DELAY(500);
-            //task_delay(100);
-            //_delay_ms(840);
-            //task_yield();
+
     }
 }
 void task2() {
         while(1) {
-            //serial_puts("task2\n\r",NULL);
             shell_println("task2");
             TASK_DELAY(520);
-            //_delay_ms(1200);
-            //task_yield();
+            // kill this task
+            task_kill();
     }
 }
 void task3() {
         while(1) {
-            //serial_puts("task3\n\r",NULL);
             shell_println("task3");
             TASK_DELAY(510);
-            //_delay_ms(1244);
-            //task_yield();
     }
 }
 void task4() {
         while(1) {
-            //serial_puts("task4\n\r",NULL);
             shell_println("task4");
             TASK_DELAY(520);
-            //_delay_ms(1153);
-            //task_yield();
+
     }
 }
 
@@ -72,7 +62,6 @@ void task4() {
 int main (void) {
 
     system_init();
-    //shell_println("welcome to tinyos");
 
     create_task(100, task2);
     create_task(300, task1);
@@ -83,7 +72,7 @@ int main (void) {
     sei();
     scheduler_start();
 
-    // loop
+    // loop - not supposed to get here
     while(1) {
         
         if(serial_available()) // read USART/serial and pass char to shell
@@ -99,6 +88,7 @@ int main (void) {
 void system_init() {
     
     USART_Init(9600);
+    // init os timer with context switching at every 10 ticks
     os_timer_init(10);
 
     // give shell access USART/serial and init shell

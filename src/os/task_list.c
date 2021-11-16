@@ -1,6 +1,6 @@
 #include "os/os.h"
 
-
+#include "shell.h" // DEBUG
 
 extern volatile TCB_t * current_tcb;
 
@@ -52,6 +52,23 @@ void switch_task_from_yield(void) {
     // point to next ready task
     current_tcb = tcb_list[active];
 
+}
+
+
+void remove_task(TCB_t* _tcb) {
+
+    for(uint8_t i = 0 ; i < nr_threads ; i++ )
+        if(tcb_list[i]->top_of_stack == _tcb->top_of_stack) {
+            shell_println("removing");
+
+            free(_tcb->top_of_stack);
+            free(_tcb);
+
+            for(uint8_t j = i + 1 ; j < nr_threads - 1 ; j++)
+                tcb_list[i] = tcb_list[j];
+            
+            nr_threads--;
+        }
 }
 
 

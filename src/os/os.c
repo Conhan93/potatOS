@@ -187,6 +187,16 @@ void task_delay(uint32_t _ticks) {
 
     //task_yield();
 }
+/**
+ * @brief Sets the state of the current task to KILL
+ * ,marking it for deletion by housekeeping task.
+ * then yields to the next task.
+ * 
+ */
+void task_kill() {
+    current_tcb->task_state = KILL;
+    task_yield();
+}
 
 ////////// TIMER
 
@@ -228,7 +238,6 @@ void os_timer_init(uint64_t _switch_interval) {
  * if a context switch is to take place
  */
 static void timer_tick() {
-    //serial_putc('s');
     millis_counter++;
     if(!(millis_counter % switch_interval)) {
         perform_switch = 1;
@@ -254,12 +263,11 @@ void check_task_delays() {
     for(uint8_t index = 0 ; index < nr_tasks ; index++) {
         task_delay_t* task_delay = &tasks[index]->delay;
 
-        if(!task_delay->has_delay) {
-            //serial_puts("no delay\n\r", NULL);
+        // skip if no delay
+        if(!task_delay->has_delay) 
             continue;
-        }
-        //serial_puts("yes delay\n\r", NULL);   
-        
+    
+        // check if delay has elapsed, remove delay and set state to READY
         if(os_get_timer_count() - task_delay->time_started > task_delay->delay) {
             task_delay->has_delay = 0;
             tasks[index]->task_state = READY;
@@ -267,24 +275,44 @@ void check_task_delays() {
     }
 
 }
+#include "shell.h"
+void kill_tasks() {
+    TCB_t** tasks = get_tasks();
+    uint8_t nr_tasks = get_nr_tasks();
+
+    for(uint8_t index = 0 ; index < nr_tasks ; index++) {
+        shell_println("kill search");
+        if(tasks[index]->task_state == KILL ) {
+            shell_println("kill");
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                remove_task(tasks[index]);
+            }
+        }
+    }
+}
 
 void task_housekeeping() {
     while(1) {
+        // check the status of thread delays and update thread states
         check_task_delays();
-        //serial_puts("house\n\r", NULL);
+        // check task states and terminate any threads set to KILL state
+        kill_tasks();
+        // context switch so housekeeping task won't hog the CPU if not using timer interrupts
+        task_yield();
     }
 }
 
 
 ///////////// Context switching
-
-//void task_yield( void ) __attribute__ ( ( hot, flatten, naked ) );
+/** 
+ * @brief called from inside a task
+ *  yields the cpu to the next task by
+ *  triggering a context switch
+ */
 void task_yield( void )
 {
     SAVE_CONTEXT();
     switch_task_from_yield();
-    //perform_switch = 1;
-    //switch_task();
     RESTORE_CONTEXT();
 
     __asm__ __volatile__ ( "reti" );

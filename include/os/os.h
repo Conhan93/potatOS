@@ -8,7 +8,8 @@ typedef void (*task_function)();
 typedef enum {
     RUNNING,
     READY,
-    BLOCKED
+    BLOCKED,
+    KILL
 } task_state_t;
 
 typedef struct {
@@ -31,6 +32,7 @@ void scheduler_start();
 void os_timer_init(uint64_t _switch_interval);
 void task_yield( void ) __attribute__ ( ( hot, flatten, naked ) );
 void task_delay(uint32_t _ticks) __attribute__ ( ( hot, flatten, naked ) );
+void task_kill();
 
 #define TASK_DELAY(x) task_delay(x) ; \
     task_yield();
