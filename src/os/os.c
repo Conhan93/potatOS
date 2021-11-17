@@ -251,7 +251,7 @@ uint64_t os_get_timer_count() {return millis_counter;}
 //////////////////// Housekeeping task
 
 
-#include "coms/serial.h" /// DEBUG
+//#include "coms/serial.h" /// DEBUG
 
 extern TCB_t * get_tasks();
 extern uint8_t get_nr_tasks();
@@ -281,7 +281,7 @@ void kill_tasks() {
     uint8_t nr_tasks = get_nr_tasks();
 
     for(uint8_t index = 0 ; index < nr_tasks ; index++) {
-        shell_println("kill search");
+        //shell_println("kill search");
         if(tasks[index]->task_state == KILL ) {
             shell_println("kill");
             ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {

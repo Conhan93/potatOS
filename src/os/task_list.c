@@ -64,10 +64,14 @@ void remove_task(TCB_t* _tcb) {
             free(_tcb->top_of_stack);
             free(_tcb);
 
-            for(uint8_t j = i + 1 ; j < nr_threads - 1 ; j++)
-                tcb_list[i] = tcb_list[j];
+            //for(uint8_t j = i + 1 ; j < nr_threads - 1 ; j++)
+                //tcb_list[i] = tcb_list[j];
+            for( ; i < nr_threads - 1 ; i++)
+		        tcb_list[i] = tcb_list[i+1];
             
             nr_threads--;
+
+            return;
         }
 }
 
