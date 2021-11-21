@@ -7,10 +7,13 @@
 #include "avr/interrupt.h"
 #include "util/atomic.h"
 // current thread control block
-volatile TCB_t *current_tcb;
+TCB_t volatile *current_tcb;
 
 
 ///// OS
+
+#define TRIGGER_CONTEXT_CHANGE PORTD |= (1 << PD2)
+#define CLEAR_CONTEXT_CHANGE_FLAG PORTD &= ~(1 << PD2)
 
 #define SAVE_CONTEXT()                                                              \
         __asm__ __volatile__ (  "push   r0                             \n\t"   \
@@ -101,7 +104,6 @@ volatile TCB_t *current_tcb;
                              );
 
 
-void task_yield( void ) __attribute__ ( ( hot, flatten, naked ) );
 void task_housekeeping();
 
 
@@ -173,6 +175,14 @@ void scheduler_start() {
 
 uint64_t os_get_timer_count();
 
+/**
+ * @brief Sets a task delay and then blocks the task
+ *  from executing for the duration of the delay.
+ * 
+ * Delay checked and cleared by housekeeping task.
+ * 
+ * @param _ticks the amount of timer ticks to sleep.
+ */
 void task_delay(uint32_t _ticks) {
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -185,7 +195,7 @@ void task_delay(uint32_t _ticks) {
         current_tcb->task_state = BLOCKED;
     }
 
-    //task_yield();
+    TRIGGER_CONTEXT_CHANGE;
 }
 /**
  * @brief Sets the state of the current task to KILL
@@ -195,14 +205,13 @@ void task_delay(uint32_t _ticks) {
  */
 void task_kill() {
     current_tcb->task_state = KILL;
-    task_yield();
+    TRIGGER_CONTEXT_CHANGE;
 }
 
 ////////// TIMER
 
 static volatile uint64_t switch_interval = 0;
 static volatile uint64_t millis_counter = 1;
-extern volatile uint8_t perform_switch;
 
 void os_timer_init(uint64_t _switch_interval) {
 
@@ -215,33 +224,41 @@ void os_timer_init(uint64_t _switch_interval) {
     //TCCR0B |= (1 << CS02) | (1 << CS00);
 
     // 64 prescaler
-    //TCCR0B |= (1 << CS01) | (1 << CS00);
+    TCCR0B |= (1 << CS01) | (1 << CS00);
 
     // 256 prescaler
-    TCCR0B |= (1 << CS02);
+    //TCCR0B |= (1 << CS02);
 
     // enable interrupt on OCR0A compare match
     TIMSK0 |= (1 << OCIE0A);
 
     //OCR0A = 155; // 100 Hz on 1024 prescaler
 
-    //OCR0A = 249; // 1000 Hz on 64 prescaler
+    OCR0A = 249; // 1000 Hz on 64 prescaler
     //OCR0A = 38; // 411 Hz , about 2.4 ms at 1024
     //OCR0A = 14;
-    OCR0A = 175; // 357 Hz, 2.8ms at 256 prescaler
+    //OCR0A = 175; // 357 Hz, 2.8ms at 256 prescaler
+
+    // enable software interrupt for context switch
+    DDRD |= (1 << PD2);
+    PORTD &= ~(1 << PD2);
+
+    // trigger interrupt on rising edge
+    EICRA |= (1 << ISC01) | (1 << ISC00);
+
+    // enable interrupt
+    EIMSK |= (1 << INT0);
     
 }
 
-//static void timer_tick() __attribute (( hot, flatten));
 /**
  * @brief updates the timer counter and checks
  * if a context switch is to take place
  */
 static void timer_tick() {
     millis_counter++;
-    if(!(millis_counter % switch_interval)) {
-        perform_switch = 1;
-    }
+    if(!(millis_counter % switch_interval)) 
+        TRIGGER_CONTEXT_CHANGE;
         
 }
 uint64_t os_get_timer_count() {return millis_counter;}
@@ -249,9 +266,6 @@ uint64_t os_get_timer_count() {return millis_counter;}
 
 
 //////////////////// Housekeeping task
-
-
-//#include "coms/serial.h" /// DEBUG
 
 extern TCB_t * get_tasks();
 extern uint8_t get_nr_tasks();
@@ -281,9 +295,7 @@ void kill_tasks() {
     uint8_t nr_tasks = get_nr_tasks();
 
     for(uint8_t index = 0 ; index < nr_tasks ; index++) {
-        //shell_println("kill search");
         if(tasks[index]->task_state == KILL ) {
-            shell_println("kill");
             ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
                 remove_task(tasks[index]);
             }
@@ -298,7 +310,7 @@ void task_housekeeping() {
         // check task states and terminate any threads set to KILL state
         kill_tasks();
         // context switch so housekeeping task won't hog the CPU if not using timer interrupts
-        task_yield();
+        TRIGGER_CONTEXT_CHANGE;
     }
 }
 
@@ -311,24 +323,22 @@ void task_housekeeping() {
  */
 void task_yield( void )
 {
-    SAVE_CONTEXT();
-    switch_task_from_yield();
-    RESTORE_CONTEXT();
-
-    __asm__ __volatile__ ( "reti" );
+    TRIGGER_CONTEXT_CHANGE;
 }
 
 // timer0 interrupt on match with OCR0A
-ISR(TIMER0_COMPA_vect, ISR_NAKED) __attribute__ ((hot, flatten));
-
-ISR(TIMER0_COMPA_vect, ISR_NAKED) {
-    SAVE_CONTEXT();
+ISR(TIMER0_COMPA_vect) {
     timer_tick();
+
+}
+
+ISR(INT0_vect, ISR_NAKED) {
+    SAVE_CONTEXT();
     switch_task();
+    CLEAR_CONTEXT_CHANGE_FLAG;
     RESTORE_CONTEXT();
 
     __asm__ __volatile__ ( "reti" );
-
 }
 
 
