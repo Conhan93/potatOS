@@ -6,6 +6,8 @@
 #include "avr/io.h"
 #include "avr/interrupt.h"
 #include "util/atomic.h"
+
+
 // current thread control block
 TCB_t volatile *current_tcb;
 
@@ -13,7 +15,7 @@ TCB_t volatile *current_tcb;
 ///// OS
 
 #define TRIGGER_CONTEXT_CHANGE PORTD |= (1 << PD2)
-#define CLEAR_CONTEXT_CHANGE_FLAG PORTD &= ~(1 << PD2)
+#define RESET_CONTEXT_CHANGE_TRIGGER PORTD &= ~(1 << PD2)
 
 #define SAVE_CONTEXT()                                                              \
         __asm__ __volatile__ (  "push   r0                             \n\t"   \
@@ -158,12 +160,23 @@ void create_task(uint16_t size, task_function task) {
     current_tcb = new_tcb;
 
 }
+static void enable_context_switch() {
+    // enable software interrupt for context switch
+    DDRD |= (1 << PD2);
+    PORTD &= ~(1 << PD2);
 
+    // trigger interrupt on rising edge
+    EICRA |= (1 << ISC01) | (1 << ISC00);
+
+    // enable interrupt
+    EIMSK |= (1 << INT0);
+}
 
 void scheduler_start() {
     // start housekeeping task
     create_task(200,task_housekeeping);
 
+    enable_context_switch();
     // restore context of first thread, current tcb should be pointing at it already
     RESTORE_CONTEXT();
 
@@ -238,17 +251,6 @@ void os_timer_init(uint64_t _switch_interval) {
     //OCR0A = 38; // 411 Hz , about 2.4 ms at 1024
     //OCR0A = 14;
     //OCR0A = 175; // 357 Hz, 2.8ms at 256 prescaler
-
-    // enable software interrupt for context switch
-    DDRD |= (1 << PD2);
-    PORTD &= ~(1 << PD2);
-
-    // trigger interrupt on rising edge
-    EICRA |= (1 << ISC01) | (1 << ISC00);
-
-    // enable interrupt
-    EIMSK |= (1 << INT0);
-    
 }
 
 /**
@@ -332,10 +334,13 @@ ISR(TIMER0_COMPA_vect) {
 
 }
 
+/**
+ * interrupt used to perform a context switch
+ */
 ISR(INT0_vect, ISR_NAKED) {
     SAVE_CONTEXT();
     switch_task();
-    CLEAR_CONTEXT_CHANGE_FLAG;
+    RESET_CONTEXT_CHANGE_TRIGGER;
     RESTORE_CONTEXT();
 
     __asm__ __volatile__ ( "reti" );
