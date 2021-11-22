@@ -22,12 +22,6 @@ char* t1 = "task1", *t3 = "task3", *t4 = "task4";
 
 void system_init();
 
-void task1a() {
-    while(1) {
-        serial_puts("task1a\n\r", NULL);
-        TASK_DELAY(650);
-    }
-}
 
 void task1() {
     //cli();
@@ -36,8 +30,8 @@ void task1() {
     while(1) {
 
             shell_println(t1);
-            //task_delay(300);
-            task_yield();
+            task_delay(300);
+            //task_yield();
 
     }
 }
@@ -45,16 +39,16 @@ void task1() {
 void task3() {
         while(1) {
             shell_println(t3);
-            //task_delay(450);
-            task_yield();
+            task_delay(450);
+            //task_yield();
 
     }
 }
 void task4() {
         while(1) {
             shell_println(t4);
-            //task_delay(999);
-            task_yield();
+            task_delay(999);
+            //task_yield();
     }
 }
 
@@ -63,7 +57,7 @@ int main (void) {
 
     
 
-    create_task(100, task2);
+    //create_task(100, task2);
     create_task(300, task1);
     create_task(100, task3);
     create_task(100, task4);
@@ -84,7 +78,7 @@ void system_init() {
     
     USART_Init(9600);
     // init os timer with context switching at every 10 ticks
-    //os_timer_init(3);
+    os_timer_init(3);
 
     // give shell access USART/serial and init shell
     shell_set_send_char(serial_putc);

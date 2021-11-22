@@ -170,7 +170,7 @@ static void enable_context_switch() {
 
 void scheduler_start() {
     // start housekeeping task
-    create_task(200,task_housekeeping);
+    create_task(100,task_housekeeping);
 
     // set current tcb to first task
     switch_task();
@@ -198,12 +198,7 @@ uint64_t os_get_timer_count();
 void task_delay(uint32_t _ticks) {
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        uint64_t now = os_get_timer_count();
-
-        current_tcb->delay.delay  = _ticks;
-        current_tcb->delay.time_started = now;
-        current_tcb->delay.has_delay = 1;
-
+        current_tcb->delay = _ticks;
         current_tcb->task_state = BLOCKED;
     }
 
@@ -252,12 +247,33 @@ void os_timer_init(uint64_t _switch_interval) {
     //OCR0A = 175; // 357 Hz, 2.8ms at 256 prescaler
 }
 
+extern TCB_t * get_tasks();
+extern uint8_t get_nr_tasks();
+
+/**
+ * @brief decrements task delay values and change
+ * task states from BLOCKED to READY when they reach 0.
+ * 
+ */
+static void inline timer_decrement_delay_ticks() {
+    TCB_t** tasks = get_tasks();
+    uint8_t nr_tasks = get_nr_tasks();
+    TCB_t** end = tasks + nr_tasks;
+
+    while(tasks != end)
+        if((*tasks)->delay)
+            (*(tasks++))->delay--;
+        else
+            (*(tasks++))->task_state = READY;
+
+}
 /**
  * @brief updates the timer counter and checks
  * if a context switch is to take place
  */
 static void timer_tick() {
     millis_counter++;
+    timer_decrement_delay_ticks();
     if(!(millis_counter % switch_interval)) 
         TRIGGER_CONTEXT_CHANGE;
         
@@ -268,28 +284,7 @@ uint64_t os_get_timer_count() {return millis_counter;}
 
 //////////////////// Housekeeping task
 
-extern TCB_t * get_tasks();
-extern uint8_t get_nr_tasks();
 
-void check_task_delays() {
-    TCB_t** tasks = get_tasks();
-    uint8_t nr_tasks = get_nr_tasks();
-
-    for(uint8_t index = 0 ; index < nr_tasks ; index++) {
-        task_delay_t* task_delay = &tasks[index]->delay;
-
-        // skip if no delay
-        if(!task_delay->has_delay) 
-            continue;
-    
-        // check if delay has elapsed, remove delay and set state to READY
-        if(os_get_timer_count() - task_delay->time_started > task_delay->delay) {
-            task_delay->has_delay = 0;
-            tasks[index]->task_state = READY;
-        }
-    }
-
-}
 #include "shell.h" /// DEBUG
 void kill_tasks() {
     TCB_t** tasks = get_tasks();
@@ -303,13 +298,12 @@ void kill_tasks() {
         }
     }
 }
-
+//#include "avr/sleep.h"
 void task_housekeeping() {
     while(1) {
-        // check the status of thread delays and update thread states
-        check_task_delays();
         // check task states and terminate any threads set to KILL state
         kill_tasks();
+        //sleep_enable();
         // context switch so housekeeping task won't hog the CPU if not using timer interrupts
         TRIGGER_CONTEXT_CHANGE;
     }
@@ -329,7 +323,10 @@ void task_yield( void )
 
 // timer0 interrupt on match with OCR0A
 ISR(TIMER0_COMPA_vect) {
-    timer_tick();
+    millis_counter++;
+    timer_decrement_delay_ticks();
+    if(!(millis_counter % switch_interval)) 
+        TRIGGER_CONTEXT_CHANGE;
 
 }
 
