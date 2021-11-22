@@ -147,7 +147,6 @@ void create_task(uint16_t size, task_function task) {
     TCB_t* new_tcb = malloc(sizeof(TCB_t));
 
     // initiate task stack and couple with tcb
-    new_tcb->top_of_stack = task_stack_adress;
     new_tcb->top_of_stack = init_task_stack(task_stack_adress + size, task);
 
     // start task in ready state
@@ -155,9 +154,6 @@ void create_task(uint16_t size, task_function task) {
 
     // add task to list
     add_task(new_tcb);
-
-    // put task as first
-    current_tcb = new_tcb;
 
 }
 static void enable_context_switch() {
@@ -175,6 +171,9 @@ static void enable_context_switch() {
 void scheduler_start() {
     // start housekeeping task
     create_task(200,task_housekeeping);
+
+    // set current tcb to first task
+    switch_task();
 
     enable_context_switch();
     // restore context of first thread, current tcb should be pointing at it already
@@ -291,7 +290,7 @@ void check_task_delays() {
     }
 
 }
-#include "shell.h"
+#include "shell.h" /// DEBUG
 void kill_tasks() {
     TCB_t** tasks = get_tasks();
     uint8_t nr_tasks = get_nr_tasks();

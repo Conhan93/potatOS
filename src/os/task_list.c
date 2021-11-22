@@ -22,10 +22,6 @@ void add_task(TCB_t* new_tcb) {
 }
 
 void switch_task(void) {
-    
-    // save any changes to tcb
-    *tcb_list[active] = *current_tcb;
-
     // find next ready task
     do {
         active = contain_rollover(++active, nr_threads);
