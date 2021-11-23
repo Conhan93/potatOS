@@ -13,8 +13,16 @@
 #define EXTERNAL_INTERRUPT 0
 #define SCHEDULER_BEHAVIOR PRIORITY_SCHEDULING
 
+// sets the housekeeping(idle) task to sleep if set to 1
+#define IDLE_SLEEP 1
 
 
+#if TIMER < 0 || TIMER > 2
+    #error invalid value used for timer in os config
+#endif
+#if EXTERNAL_INTERRUPT < 0 || EXTERNAL_INTERRUPT > 1
+    #error invalid value used for external interrupt in os config
+#endif
 
 #include "avr/io.h"
 

@@ -263,14 +263,25 @@ void kill_tasks() {
         }
     }
 }
-//#include "avr/sleep.h"
+
+#if IDLE_SLEEP
+#include "avr/sleep.h"
+#endif
+
 void task_housekeeping() {
     while(1) {
         // check task states and terminate any threads set to KILL state
         kill_tasks();    
-        //sleep_enable();
-        // context switch so housekeeping task won't hog the CPU if not using timer interrupts
+
+        #if IDLE_SLEEP // sleep between ticks until context switch
+
+        sleep_enable();
+
+        #else         // context switch so housekeeping task won't hog the CPU if not using timer interrupts
+
         TRIGGER_CONTEXT_CHANGE;
+
+        #endif
     }
 }
 
