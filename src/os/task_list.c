@@ -4,7 +4,7 @@
 
 #include "shell.h" // DEBUG
 
-extern volatile TCB_t * current_tcb;
+extern TCB_t volatile * current_tcb;
 
 #define MAX_THREADS 10
 
@@ -23,6 +23,7 @@ static int cmp_tcb_prio(const void * a, const void* b);
 #endif
 
 #if SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
+// adds task to list
 void add_task(TCB_t* new_tcb) {
 
     if(nr_threads >= MAX_THREADS)
@@ -37,6 +38,7 @@ void add_task(TCB_t* new_tcb) {
     
 }
 #elif SCHEDULER_BEHAVIOR == ROUND_ROBIN
+// adds task to list
 void add_task(TCB_t* new_tcb) {
 
     if(nr_threads >= MAX_THREADS)
@@ -48,6 +50,7 @@ void add_task(TCB_t* new_tcb) {
     tcb_list[nr_threads++] = new_tcb;
 }
 #endif
+// points the current tcb to the next task
 void next_task(void) {
 
     #if SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
@@ -69,7 +72,7 @@ void next_task(void) {
 
     #endif
 }
-
+// removes task from list and frees task memory
 void remove_task(TCB_t* _tcb) {
 
     for(uint8_t i = 0 ; i < nr_threads ; i++ )

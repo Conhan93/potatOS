@@ -138,6 +138,7 @@ static uint8_t* init_task_stack(uint8_t* stack_top, task_function func) {
  * 
  * @param size memory in bytes allocated for task stack
  * @param task function to execute task
+ * @param prio the priority of the task
  */
 void create_task(uint16_t size, task_function task, task_priority_t prio) {
     
@@ -193,7 +194,7 @@ static void enable_context_switch() {
     // enable interrupt
     EIMSK |= EXTERNAL_INTERRUPT_ENABLE;
 }
-
+// starts executing the scheduler
 void scheduler_start() {
     // start housekeeping task
     #if SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
@@ -212,6 +213,7 @@ void scheduler_start() {
     // generate return call, to switch to first thread execution
     __asm__ __volatile__ ( "ret" );
 }
+
 static void switch_task() {
     next_task();
 }
@@ -249,8 +251,6 @@ void task_kill() {
 
 //////////////////// Housekeeping task
 
-
-#include "shell.h" /// DEBUG
 void kill_tasks() {
     TCB_t** tasks = get_tasks();
     uint8_t nr_tasks = get_nr_tasks();
