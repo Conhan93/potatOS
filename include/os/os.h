@@ -23,7 +23,7 @@ typedef struct {
 void create_task(uint16_t size, task_function task);
 void scheduler_start();
 
-void os_timer_init(uint64_t _switch_interval);
+//void os_timer_init(uint64_t _switch_interval);
 void task_yield();
 void task_delay(uint32_t _ticks); 
 void task_kill();

@@ -1,5 +1,7 @@
 #include "os/os.h"
 
+#include "stdlib.h"
+
 #include "shell.h" // DEBUG
 
 extern volatile TCB_t * current_tcb;

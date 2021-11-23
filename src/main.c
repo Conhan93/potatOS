@@ -6,6 +6,7 @@
 #include <shell.h>
 
 #include "os/os.h"
+#include "os/os_timer.h"
 
 #include "string.h"
 
