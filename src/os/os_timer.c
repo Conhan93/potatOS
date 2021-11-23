@@ -25,15 +25,12 @@ void os_timer_init(uint64_t _switch_interval) {
     TIMER_OUTPUT_COMPA = 249;
 }
 
-extern TCB_t * get_tasks();
-extern uint8_t get_nr_tasks();
-
 /**
  * @brief decrements task delay values and change
  * task states from BLOCKED to READY when they reach 0.
  * 
  */
-static void inline timer_decrement_delay_ticks() {
+inline static void timer_decrement_delay_ticks() {
     TCB_t** tasks = get_tasks();
     uint8_t nr_tasks = get_nr_tasks();
     TCB_t** end = tasks + nr_tasks;

@@ -108,7 +108,7 @@ void task_housekeeping();
 
 
 
-static uint16_t* init_task_stack(uint8_t* stack_top, task_function func) {
+static uint8_t* init_task_stack(uint8_t* stack_top, task_function func) {
     uint16_t func_addr = (uint16_t)func;
 
     // place function code on stack

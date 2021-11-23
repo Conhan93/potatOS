@@ -77,8 +77,8 @@ void remove_task(TCB_t* _tcb) {
         if(tcb_list[i]->top_of_stack == _tcb->top_of_stack) {
 
             // free memory
-            free(_tcb->top_of_stack);
-            free(_tcb);
+            free((uint8_t*)_tcb->top_of_stack);
+            free((TCB_t*)_tcb);
 
             // close holes in array
             for( ; i < nr_threads - 1 ; i++)
@@ -91,7 +91,7 @@ void remove_task(TCB_t* _tcb) {
 }
 
 
-TCB_t * get_tasks() { return tcb_list; }
+TCB_t ** get_tasks() { return (TCB_t**)tcb_list; }
 uint8_t get_nr_tasks() {return nr_threads; }
 
 #if SCHEDULER_BEHAVIOR == ROUND_ROBIN

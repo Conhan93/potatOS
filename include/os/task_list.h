@@ -9,5 +9,8 @@ void remove_task(TCB_t* _tcb);
 
 void next_task(void);
 
+TCB_t ** get_tasks();
+uint8_t get_nr_tasks();
+
 
 #endif
