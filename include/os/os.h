@@ -1,5 +1,6 @@
 #ifndef OS_H_INCLUDED
 #define OS_H_INCLUDED
+#include "os/os_config.h"
 
 #include "stdint.h"
 
@@ -19,10 +20,17 @@ typedef struct {
     volatile uint8_t* top_of_stack; // points to thread stack context
     volatile task_state_t task_state;
     volatile task_delay_t delay;
-    volatile task_priority_t priority;
+    #if SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
+        volatile task_priority_t priority;
+    #endif
 } TCB_t;
 
+#if SCHEDULER_BEHAVIOR == ROUND_ROBIN
+void create_task(uint16_t size, task_function task);
+#elif SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
 void create_task(uint16_t size, task_function task, task_priority_t prio);
+#endif
+
 void scheduler_start();
 
 //void os_timer_init(uint64_t _switch_interval);

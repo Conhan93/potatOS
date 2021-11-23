@@ -132,6 +132,7 @@ static uint16_t* init_task_stack(uint8_t* stack_top, task_function func) {
 
 }
 
+#if SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
 /**
  * @brief Create a task object
  * 
@@ -157,6 +158,30 @@ void create_task(uint16_t size, task_function task, task_priority_t prio) {
     add_task(new_tcb);
 
 }
+#elif SCHEDULER_BEHAVIOR == ROUND_ROBIN
+/**
+ * @brief Create a task object
+ * 
+ * @param size memory in bytes allocated for task stack
+ * @param task function to execute task
+ */
+void create_task(uint16_t size, task_function task) {
+    
+    // allocate task stack with tcb at bottom
+    uint8_t* task_stack_adress = malloc(size);
+    TCB_t* new_tcb = malloc(sizeof(TCB_t));
+
+    // initiate task stack and couple with tcb
+    new_tcb->top_of_stack = init_task_stack(task_stack_adress + size, task);
+
+    // start task in ready state
+    new_tcb->task_state = READY;
+
+    // add task to list
+    add_task(new_tcb);
+
+}
+#endif
 static void enable_context_switch() {
     // enable software interrupt for context switch
     DDRD |= (1 << EXTERNAL_INTERRUPT_PIN);
@@ -171,7 +196,11 @@ static void enable_context_switch() {
 
 void scheduler_start() {
     // start housekeeping task
+    #if SCHEDULER_BEHAVIOR == PRIORITY_SCHEDULING
     create_task(100,task_housekeeping, 255);
+    #elif SCHEDULER_BEHAVIOR == ROUND_ROBIN
+    create_task(100,task_housekeeping);
+    #endif
 
     // set current tcb to first task
     next_task();

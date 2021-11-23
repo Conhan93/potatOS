@@ -1,16 +1,23 @@
 #ifndef OS_CONFIG_H_INCLUDED
 #define OS_CONFIG_H_INCLUDED
 
-#include "avr/io.h"
+// SCHEDULER BEHAVIORS
+#define ROUND_ROBIN 0
+#define PRIORITY_SCHEDULING 1
+
+
+
+/// SETTINGS
 
 #define TIMER 0
-#define EXTERNAL_INTERRUPT 1
+#define EXTERNAL_INTERRUPT 0
+#define SCHEDULER_BEHAVIOR PRIORITY_SCHEDULING
 
 
-/**
- * 
- * 
- */
+
+
+#include "avr/io.h"
+
 #if TIMER == 0
 
 #define TIMER_CTC_REG TCCR0A

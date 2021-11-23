@@ -7,6 +7,7 @@
 
 #include "os/os.h"
 #include "os/os_timer.h"
+#include "os/os_config.h"
 
 #include "string.h"
 
