@@ -58,11 +58,17 @@ static void timer_tick() {
 }
 uint64_t os_get_timer_count() {return millis_counter;}
 
+#include "shell.h"
+
 // timer0 interrupt on match with OCR0A
 ISR(TIMER_INTERRUPT_VECTOR) {
+    
     millis_counter++;
     timer_decrement_delay_ticks();
-    if(!(millis_counter % switch_interval)) 
+    if(!(millis_counter % switch_interval)) {
+        //shell_println("t");
         TRIGGER_CONTEXT_CHANGE;
+    }
+        
 
 }

@@ -7,7 +7,7 @@
 void add_task(TCB_t* new_tcb);
 void remove_task(TCB_t* _tcb);
 
-void switch_task(void);
+void next_task(void);
 
 
 #endif

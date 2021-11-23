@@ -138,7 +138,7 @@ static uint16_t* init_task_stack(uint8_t* stack_top, task_function func) {
  * @param size memory in bytes allocated for task stack
  * @param task function to execute task
  */
-void create_task(uint16_t size, task_function task) {
+void create_task(uint16_t size, task_function task, task_priority_t prio) {
     
     // allocate task stack with tcb at bottom
     uint8_t* task_stack_adress = malloc(size);
@@ -149,6 +149,9 @@ void create_task(uint16_t size, task_function task) {
 
     // start task in ready state
     new_tcb->task_state = READY;
+
+    // assign priority
+    new_tcb->priority = prio;
 
     // add task to list
     add_task(new_tcb);
@@ -168,10 +171,10 @@ static void enable_context_switch() {
 
 void scheduler_start() {
     // start housekeeping task
-    create_task(100,task_housekeeping);
+    create_task(100,task_housekeeping, 255);
 
     // set current tcb to first task
-    switch_task();
+    next_task();
 
     enable_context_switch();
     // restore context of first thread, current tcb should be pointing at it already
@@ -179,6 +182,9 @@ void scheduler_start() {
 
     // generate return call, to switch to first thread execution
     __asm__ __volatile__ ( "ret" );
+}
+static void switch_task() {
+    next_task();
 }
 
 
@@ -232,7 +238,7 @@ void kill_tasks() {
 void task_housekeeping() {
     while(1) {
         // check task states and terminate any threads set to KILL state
-        kill_tasks();
+        kill_tasks();    
         //sleep_enable();
         // context switch so housekeeping task won't hog the CPU if not using timer interrupts
         TRIGGER_CONTEXT_CHANGE;

@@ -15,22 +15,29 @@ static volatile uint8_t active = 0;
 volatile uint8_t perform_switch = 0;
 
 static inline uint16_t contain_rollover(int16_t x, uint32_t sz);
+static int cmp_tcb_prio(const void * a, const void* b);
 
 void add_task(TCB_t* new_tcb) {
-    // task added latest starts first
-    active = nr_threads;
-    // copy control block into list
+
+    if(nr_threads >= MAX_THREADS)
+        return;
+
+    // add task
     tcb_list[nr_threads++] = new_tcb;
+
+    // sort by priority
+    qsort(tcb_list, nr_threads, sizeof(TCB_t*), cmp_tcb_prio);
+    
 }
 
-void switch_task(void) {
-    // find next ready task
-    do {
-        active = contain_rollover(++active, nr_threads);
-    }while(tcb_list[active]->task_state != READY);
-    
-    // point to next ready task
-    current_tcb = tcb_list[active];
+void next_task(void) {
+
+    for(uint8_t index = 0 ; index < nr_threads ; index++)
+        if(tcb_list[index]->task_state == READY || tcb_list[index]->task_state == RUNNING) {
+            current_tcb = tcb_list[index];
+            return;
+        }
+            
 
 }
 
@@ -61,4 +68,10 @@ uint8_t get_nr_tasks() {return nr_threads; }
 // contain with roll over in both directions
 static inline uint16_t contain_rollover(int16_t x, uint32_t sz) {
     return ((x >= sz) ? 0 : (x < 0) ? (sz - 1) : x);
+}
+static int cmp_tcb_prio(const void * a, const void* b) {
+    uint8_t prio_a = ((TCB_t *)a)->priority;
+    uint8_t prio_b = ((TCB_t *)b)->priority;
+
+    return prio_a == prio_b ? 0 : prio_a > prio_b ? 1 : -1;
 }

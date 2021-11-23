@@ -25,13 +25,10 @@ void system_init();
 
 
 void task1() {
-    //cli();
-    //create_task(100, task1a);
-    //sei();
     while(1) {
 
             shell_println(t1);
-            task_delay(300);
+            task_delay(1000);
             //task_yield();
 
     }
@@ -40,7 +37,7 @@ void task1() {
 void task3() {
         while(1) {
             shell_println(t3);
-            task_delay(450);
+            task_delay(1000);
             //task_yield();
 
     }
@@ -48,7 +45,7 @@ void task3() {
 void task4() {
         while(1) {
             shell_println(t4);
-            task_delay(999);
+            task_delay(1000);
             //task_yield();
     }
 }
@@ -59,9 +56,9 @@ int main (void) {
     
 
     //create_task(100, task2);
-    create_task(300, task1);
-    create_task(100, task3);
-    create_task(100, task4);
+    create_task(300, task1, 0);
+    create_task(100, task3, 1);
+    create_task(100, task4, 2);
     
     system_init();
     sei();
