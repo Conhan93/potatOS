@@ -1,5 +1,6 @@
 #include "os/os.h"
 #include "os/task_list.h"
+#include "os/os_config.h"
 
 #include "stdlib.h"
 
@@ -13,9 +14,6 @@ TCB_t volatile *current_tcb;
 
 
 ///// OS
-
-#define TRIGGER_CONTEXT_CHANGE PORTD |= (1 << PD2)
-#define RESET_CONTEXT_CHANGE_TRIGGER PORTD &= ~(1 << PD2)
 
 #define SAVE_CONTEXT()                                                              \
         __asm__ __volatile__ (  "push   r0                             \n\t"   \
@@ -158,14 +156,14 @@ void create_task(uint16_t size, task_function task) {
 }
 static void enable_context_switch() {
     // enable software interrupt for context switch
-    DDRD |= (1 << PD2);
-    PORTD &= ~(1 << PD2);
+    DDRD |= (1 << EXTERNAL_INTERRUPT_PIN);
+    PORTD &= ~(1 << EXTERNAL_INTERRUPT_PIN);
 
     // trigger interrupt on rising edge
-    EICRA |= (1 << ISC01) | (1 << ISC00);
+    EICRA |= EXTERNAL_ICS_BITS;
 
     // enable interrupt
-    EIMSK |= (1 << INT0);
+    EIMSK |= EXTERNAL_INTERRUPT_ENABLE;
 }
 
 void scheduler_start() {
@@ -221,30 +219,20 @@ static volatile uint64_t switch_interval = 0;
 static volatile uint64_t millis_counter = 1;
 
 void os_timer_init(uint64_t _switch_interval) {
-
+    // interval to tick at.
     switch_interval = _switch_interval;
 
     // CTC Mode
-    TCCR0A |= (1 << WGM01);
-
-    // 1024 prescaler
-    //TCCR0B |= (1 << CS02) | (1 << CS00);
+    TIMER_CTC_REG |= (1 << WGM01);
 
     // 64 prescaler
-    TCCR0B |= (1 << CS01) | (1 << CS00);
+    TIMER_PRESCALER_REG |= (1 << CS01) | (1 << CS00);
 
-    // 256 prescaler
-    //TCCR0B |= (1 << CS02);
+    // enable interrupt on output compare match
+    TIMER_INTERRUPT_REG |= (1 << TIMER_INTERRUPT_ENABLE);
 
-    // enable interrupt on OCR0A compare match
-    TIMSK0 |= (1 << OCIE0A);
-
-    //OCR0A = 155; // 100 Hz on 1024 prescaler
-
-    OCR0A = 249; // 1000 Hz on 64 prescaler
-    //OCR0A = 38; // 411 Hz , about 2.4 ms at 1024
-    //OCR0A = 14;
-    //OCR0A = 175; // 357 Hz, 2.8ms at 256 prescaler
+    // 1000 Hz on 64 prescaler
+    TIMER_OUTPUT_COMPA = 249;
 }
 
 extern TCB_t * get_tasks();
@@ -322,7 +310,7 @@ void task_yield( void )
 }
 
 // timer0 interrupt on match with OCR0A
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER_INTERRUPT_VECTOR) {
     millis_counter++;
     timer_decrement_delay_ticks();
     if(!(millis_counter % switch_interval)) 
@@ -333,7 +321,7 @@ ISR(TIMER0_COMPA_vect) {
 /**
  * interrupt used to perform a context switch
  */
-ISR(INT0_vect, ISR_NAKED) {
+ISR(CONTEXT_SWITCH_VECTOR, ISR_NAKED) {
     SAVE_CONTEXT();
     switch_task();
     RESET_CONTEXT_CHANGE_TRIGGER;
