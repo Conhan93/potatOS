@@ -38,7 +38,7 @@ inline static void timer_decrement_delay_ticks() {
     while(tasks != end)
         if((*tasks)->delay)
             (*(tasks++))->delay--;
-        else
+        else if((*tasks)->task_state == BLOCKED)
             (*(tasks++))->task_state = READY;
 
 }
@@ -55,7 +55,6 @@ static void timer_tick() {
 }
 uint64_t os_get_timer_count() {return millis_counter;}
 
-#include "shell.h"
 
 // timer0 interrupt on match with OCR0A
 ISR(TIMER_INTERRUPT_VECTOR) {
